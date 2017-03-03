@@ -19,6 +19,9 @@ const (
 	CALLTMPL = "./call.tmpl"
 	CALLFILE = "./call_"
 	LOGFILE  = "greetcall.log"
+	UID      = 1000
+	GID      = 1000
+	SLEEP    = 1
 )
 
 type CfgVars struct {
@@ -29,10 +32,14 @@ type CfgVars struct {
 	MysqlUser string
 	MysqlPass string
 	MysqlBase string
+	UID       int
+	GID       int
+	Sleep     int
 }
 
 type Phone struct {
 	PHONE string
+	JOBID string
 }
 
 var configfile string
@@ -64,20 +71,20 @@ func init() {
 	}
 
 	if len(cfgRaw) > 0 {
-		if cfgRaw["logfile"] != "" {
-			cfgvars.LogFile = cfgRaw["logfile"]
+		if cfgRaw["log_file"] != "" {
+			cfgvars.LogFile = cfgRaw["log_file"]
 		} else {
 			cfgvars.LogFile = LOGFILE
 		}
 
-		if cfgRaw["callfile"] != "" {
-			cfgvars.CallFile = cfgRaw["callfile"]
+		if cfgRaw["call_file"] != "" {
+			cfgvars.CallFile = cfgRaw["call_file"]
 		} else {
 			cfgvars.CallFile = CALLFILE
 		}
 
-		if cfgRaw["calltmpl"] != "" {
-			cfgvars.CallTmpl = cfgRaw["calltmpl"]
+		if cfgRaw["call_tmpl"] != "" {
+			cfgvars.CallTmpl = cfgRaw["call_tmpl"]
 		} else {
 			cfgvars.CallTmpl = CALLTMPL
 		}
@@ -104,6 +111,22 @@ func init() {
 			cfgvars.MysqlBase = cfgRaw["mysql_base"]
 		} else {
 			cfgvars.MysqlBase = "db"
+		}
+
+		if cfgRaw["uid"] != "" {
+			cfgvars.UID = cfgRaw["uid"]
+		} else {
+			cfgvars.UID = UID
+		}
+		if cfgRaw["gid"] != "" {
+			cfgvars.GID = cfgRaw["gid"]
+		} else {
+			cfgvars.GID = GID
+		}
+		if cfgRaw["work_sleep"] != "" {
+			cfgvars.Sleep = cfgRaw["work_sleep"]
+		} else {
+			cfgvars.Sleep = SLEEP
 		}
 	}
 
@@ -137,14 +160,14 @@ func main() {
 	/* основной цикл обработки соединений */
 	//for {
 	generateCalls()
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(cfgvars.Sleep * time.Millisecond)
 	//}
 }
 
 /* Основной обработчик */
 func generateCalls() {
 
-	sql := "select id, pnumber from testcalls where status='new' group by pnumber"
+	sql := "select id, pnumber, jobid from testcalls where status='new' group by pnumber"
 	log.Println(sql)
 	rows, err := db.Query(sql)
 	if err != nil {
@@ -155,17 +178,20 @@ func generateCalls() {
 	for rows.Next() {
 		var id int
 		var pnumber string
-		err = rows.Scan(&id, &pnumber)
+		var jobid string
+		err = rows.Scan(&id, &pnumber, &jobid)
 		if err != nil {
 			log.Println(err)
 		}
 
-		sql := "select id, pnumber from testcalls where status='new' group by pnumber"
-		log.Println(sql)
-		rows, err := db.Query(sql)
+		stmt, _ := db.Prepare("update testcalls set status='work' where id=?")
+		_, err := stmt.Exec(id)
+		if err != nil {
+			log.Println(err)
+		}
 
 		/* Формируем call-файлы */
-		num := Phone{pnumber}
+		num := Phone{pnumber, jobid}
 		fname := cfgvars.CallFile + pnumber
 		callF, err := os.OpenFile(fname, os.O_WRONLY|os.O_CREATE, 0600)
 
@@ -180,7 +206,7 @@ func generateCalls() {
 		}
 
 		err = callT.Execute(callF, num)
-		callF.Chown(109, 114)
+		callF.Chown(cfgvars.UID, cfgvars.GID)
 		if err != nil {
 			log.Println(err)
 		}
