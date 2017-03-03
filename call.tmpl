@@ -1,0 +1,11 @@
+Channel: SIP/{{.PHONE}}
+Callerid: UH-H.RU
+MaxRetries: 1
+RetryTime: 30
+WaitTime: 15
+
+Context: test-dial
+Extension: autoplay
+Priority: 1
+
+Set: CDR(userfield)="dev.uh-h.ru"
