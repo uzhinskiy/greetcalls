@@ -144,7 +144,7 @@ func main() {
 /* Основной обработчик */
 func generateCalls() {
 
-	sql := "select * from testcalls where status='new' group by pnumber"
+	sql := "select id, pnumber from testcalls where status='new' group by pnumber"
 	log.Println(sql)
 	rows, err := db.Query(sql)
 	if err != nil {
@@ -155,11 +155,16 @@ func generateCalls() {
 	for rows.Next() {
 		var id int
 		var pnumber string
-		err = rows.Scan(&id, &pnumber, nil, nil, nil)
+		err = rows.Scan(&id, &pnumber)
 		if err != nil {
 			log.Println(err)
 		}
 
+		sql := "select id, pnumber from testcalls where status='new' group by pnumber"
+		log.Println(sql)
+		rows, err := db.Query(sql)
+
+		/* Формируем call-файлы */
 		num := Phone{pnumber}
 		fname := cfgvars.CallFile + pnumber
 		callF, err := os.OpenFile(fname, os.O_WRONLY|os.O_CREATE, 0600)
