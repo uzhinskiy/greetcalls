@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -34,7 +35,7 @@ type CfgVars struct {
 	MysqlBase string
 	UID       int
 	GID       int
-	Sleep     int
+	WSleep    int
 }
 
 type Phone struct {
@@ -114,19 +115,19 @@ func init() {
 		}
 
 		if cfgRaw["uid"] != "" {
-			cfgvars.UID = cfgRaw["uid"]
+			cfgvars.UID, _ = strconv.Atoi(cfgRaw["uid"])
 		} else {
 			cfgvars.UID = UID
 		}
 		if cfgRaw["gid"] != "" {
-			cfgvars.GID = cfgRaw["gid"]
+			cfgvars.GID, _ = strconv.Atoi(cfgRaw["gid"])
 		} else {
 			cfgvars.GID = GID
 		}
 		if cfgRaw["work_sleep"] != "" {
-			cfgvars.Sleep = cfgRaw["work_sleep"]
+			cfgvars.WSleep, _ = strconv.Atoi(cfgRaw["work_sleep"])
 		} else {
-			cfgvars.Sleep = SLEEP
+			cfgvars.WSleep = SLEEP
 		}
 	}
 
@@ -157,11 +158,26 @@ func main() {
 		log.Println("Connect to SQL " + cfgvars.MysqlHost + "/" + cfgvars.MysqlBase + " success")
 	}
 
+	go checkStatus()
+
 	/* основной цикл обработки соединений */
-	//for {
-	generateCalls()
-	time.Sleep(cfgvars.Sleep * time.Millisecond)
-	//}
+	for {
+		generateCalls()
+		time.Sleep(time.Duration(cfgvars.WSleep) * time.Second)
+	}
+
+}
+
+func checkStatus() {
+	stmt, _ := db.Prepare("update testcalls set status='complete' where jobid in (select jobid from cdr where disposition='ANSWERED' );")
+
+	for {
+		_, err := stmt.Exec()
+		if err != nil {
+			log.Println(err)
+		}
+		time.Sleep(time.Duration(2*cfgvars.WSleep) * time.Second)
+	}
 }
 
 /* Основной обработчик */
@@ -180,12 +196,6 @@ func generateCalls() {
 		var pnumber string
 		var jobid string
 		err = rows.Scan(&id, &pnumber, &jobid)
-		if err != nil {
-			log.Println(err)
-		}
-
-		stmt, _ := db.Prepare("update testcalls set status='work' where id=?")
-		_, err := stmt.Exec(id)
 		if err != nil {
 			log.Println(err)
 		}
