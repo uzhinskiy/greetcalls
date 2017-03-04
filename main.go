@@ -176,7 +176,8 @@ func checkStatus() {
 		if err != nil {
 			log.Println(err)
 		}
-		time.Sleep(time.Duration(2*cfgvars.WSleep) * time.Second)
+		time.Sleep(2 * time.Second)
+		log.Println("checkstatus")
 	}
 }
 
@@ -196,6 +197,12 @@ func generateCalls() {
 		var pnumber string
 		var jobid string
 		err = rows.Scan(&id, &pnumber, &jobid)
+		if err != nil {
+			log.Println(err)
+		}
+
+		stmt, _ := db.Prepare("update testcalls set status='work' where id=?")
+		_, err := stmt.Exec(id)
 		if err != nil {
 			log.Println(err)
 		}
