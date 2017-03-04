@@ -177,14 +177,13 @@ func checkStatus() {
 			log.Println(err)
 		}
 		time.Sleep(2 * time.Second)
-		log.Println("checkstatus")
 	}
 }
 
 /* Основной обработчик */
 func generateCalls() {
 
-	sql := "select id, pnumber, jobid from testcalls where status='new' group by pnumber"
+	sql := "select id, pnumber, jobid from testcalls where status='new' group by pnumber limit 0, 20"
 	log.Println(sql)
 	rows, err := db.Query(sql)
 	if err != nil {
