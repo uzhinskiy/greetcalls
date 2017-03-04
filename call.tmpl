@@ -1,5 +1,5 @@
 Channel: SIP/{{.PHONE}}
-Callerid: UH-H.RU
+Callerid: callme
 MaxRetries: 1
 RetryTime: 30
 WaitTime: 15
@@ -10,6 +10,6 @@ Priority: 1
 
 Archive: Yes
 
-Set: CDR(userfield)="dev.uh-h.ru"
+Set: CDR(userfield)="userfield"
 Set: CDR(dest_num)="{{.PHONE}}"
 Set: CDR(jobid)="{{.JOBID}}"
