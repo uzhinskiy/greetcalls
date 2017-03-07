@@ -169,13 +169,20 @@ func main() {
 }
 
 func checkStatus() {
-	stmt, _ := db.Prepare("update testcalls set status='complete' where jobid in (select jobid from cdr where disposition='ANSWERED' );")
+	stmt_complete, _ := db.Prepare("update testcalls set status='complete' where jobid in (select jobid from cdr where disposition='ANSWERED') and status='work';")
+	stmt_failed, _ := db.Prepare("update testcalls set status='failed' where jobid in (select jobid from cdr where disposition='NO ANSWER') and status='work';")
 
 	for {
-		_, err := stmt.Exec()
+		_, err := stmt_complete.Exec()
 		if err != nil {
 			log.Println(err)
 		}
+
+		_, err := stmt_failed.Exec()
+		if err != nil {
+			log.Println(err)
+		}
+
 		time.Sleep(2 * time.Second)
 	}
 }
